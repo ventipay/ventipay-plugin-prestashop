@@ -15,9 +15,14 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         $mode = Configuration::get('VENTI_TEST_MODE');
         $apiKey = Configuration::get('VENTI_API_KEY_TEST');
 
+        echo $apiKey;
+
         $cart = $this->context->cart;
         $products = $cart->getProducts();
         $currency = new Currency($cart->id_currency);
+        
+        echo $product['name'];
+        echo $product['price_wt'];
 
         $items = [];
 
@@ -35,7 +40,9 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
           'currency' => $currency->iso_code,
         ];
      
-        $ch = curl_init('https://api.ventipay.com');
+        echo $body; 
+
+        $ch = curl_init('https://api.ventipay.com/v1/checkouts');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ":");
@@ -43,6 +50,8 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
             'Content-Type: application/json',
         ]);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+
+
         $response = curl_exec($ch);
 
         if (curl_errno($ch)) {
@@ -51,8 +60,10 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         curl_close($ch);
 
         $data = json_decode($response, true);
+        $redirectUrl = $data->url;
 
-        // 🚀 Redirigir al cliente a la pasarela externa
-        Tools::redirect($data->url);
+        echo $redirectUrl;
+
+        Tools::redirect($redirectUrl);
     }
 }
