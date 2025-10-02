@@ -4,26 +4,17 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
 {
     public function postProcess()
     {
-        // Obtener el carrito actual
         $cart = $this->context->cart;
-
+        
         if (!$this->module->active || !$cart->id) {
             Tools::redirect('index.php?controller=order&step=1');
         }
 
-        // Obtener las API Keys desde config
         $mode = Configuration::get('VENTI_TEST_MODE');
-        $apiKey = Configuration::get('VENTI_API_KEY_TEST');
+        $apiKey = $mode ? Configuration::get('VENTI_API_KEY_TEST') : Configuration::get('VENTI_API_KEY_LIVE');
 
-        echo $apiKey;
-
-        $cart = $this->context->cart;
         $products = $cart->getProducts();
         $currency = new Currency($cart->id_currency);
-        
-        echo $product['name'];
-        echo $product['price_wt'];
-
         $items = [];
 
         foreach ($products as $product) {
@@ -40,8 +31,6 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
           'currency' => $currency->iso_code,
         ];
      
-        echo $body; 
-
         $ch = curl_init('https://api.ventipay.com/v1/checkouts');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -49,8 +38,7 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Content-Type: application/json',
         ]);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
 
         $response = curl_exec($ch);
 
@@ -60,9 +48,7 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         curl_close($ch);
 
         $data = json_decode($response, true);
-        $redirectUrl = $data->url;
-
-        echo $redirectUrl;
+        $redirectUrl = $data['url'];
 
         Tools::redirect($redirectUrl);
     }
