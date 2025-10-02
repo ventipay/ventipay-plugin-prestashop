@@ -105,7 +105,7 @@ class Venti extends PaymentModule
         }
 
         $newOption = new PrestaShop\PrestaShop\Core\Payment\PaymentOption();
-        $newOption->setCallToActionText($this->l('Pagar con Mi Método'))
+        $newOption->setCallToActionText($this->l('Pagar con Venti'))
             ->setAction($this->context->link->getModuleLink($this->name, 'checkout', [], true));
 
         return [$newOption];
