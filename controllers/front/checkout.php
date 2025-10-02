@@ -29,6 +29,7 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         $body = [
           'items' => $items,
           'currency' => $currency->iso_code,
+          'success_url' => $this->context->link->getModuleLink($this->module->name, 'validation', ['cart_id' => $cart->id], true),
         ];
      
         $ch = curl_init('https://api.ventipay.com/v1/checkouts');

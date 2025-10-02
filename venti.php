@@ -10,7 +10,6 @@ class Venti extends PaymentModule
     const ADMIN_VENTI_CONFIGURATION_CONTROLLER = 'AdminConfigureVentiPrestashop';
     const HOOKS = [
         'paymentOptions',
-        'paymentReturn',
     ];
     const VENTI_TEST_MODE = 'VENTI_TEST_MODE';
     const VENTI_API_KEY_TEST = 'VENTI_API_KEY_TEST';
@@ -109,15 +108,6 @@ class Venti extends PaymentModule
             ->setAction($this->context->link->getModuleLink($this->name, 'checkout', [], true));
 
         return [$newOption];
-    }
-
-    public function hookPaymentReturn($params)
-    {
-        if (!$this->active) {
-            return;
-        }
-
-        return $this->display(__FILE__, 'views/templates/hook/payment_return.tpl');
     }
 
     public function getContent()
