@@ -13,8 +13,6 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         $mode = Configuration::get('VENTI_TEST_MODE');
         $apiKey = $mode ? Configuration::get('VENTI_API_KEY_TEST') : Configuration::get('VENTI_API_KEY_LIVE');
 
-        $products = $cart->getProducts();
-
         $this->module->validateOrder(
             $cart->id,
             Configuration::get('VENTI_OS_PENDING'),
@@ -32,14 +30,10 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         $currency = new Currency($order->id_currency);
         $items = [];
 
-        foreach ($products as $product) {
-            $items[] = [
-                'quantity'   => (int) $product['cart_quantity'],
-                'name'       => $product['name'],
-                'unit_price' => (float) $product['price_wt'], // precio unitario con impuestos
-                'sku'        => !empty($product['reference']) ? $product['reference'] : null, // si tiene referencia
-            ];
-        }
+        $items[] = [
+            'unit_price' => $cart->getOrderTotal(true, Cart::BOTH),
+            'quantity' => 1,
+        ];
 
         $body = [
           'items' => $items,
