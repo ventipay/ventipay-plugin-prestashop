@@ -14,7 +14,22 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         $apiKey = $mode ? Configuration::get('VENTI_API_KEY_TEST') : Configuration::get('VENTI_API_KEY_LIVE');
 
         $products = $cart->getProducts();
-        $currency = new Currency($cart->id_currency);
+
+        $this->module->validateOrder(
+            $cart->id,
+            Configuration::get('VENTI_OS_PENDING'),
+            (float)$cart->getOrderTotal(true, Cart::BOTH),
+            $this->module->displayName,
+            null,
+            [],
+            (int)$cart->id_currency,
+            false,
+            $this->context->customer->secure_key
+        );
+
+        $orderId = $this->module->currentOrder;
+        $order = new Order($orderId);
+        $currency = new Currency($order->id_currency);
         $items = [];
 
         foreach ($products as $product) {
@@ -30,10 +45,10 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
           'items' => $items,
           'currency' => $currency->iso_code,
           'success_url' => $this->context->link->getModuleLink($this->module->name, 'validation', ['cart_id' => $cart->id], true),
-          'notification_url' => $this->context->link->getModuleLink($this->module->name, 'webhook', [], true),
+          'notification_url' => $this->context->link->getModuleLink($this->module->name, 'webhook', ['ps_order_id' => (int)$orderId], true),
           'notification_events' => ['checkout.paid'],
           'metadata' => [
-            'ps_cart_id' => $cart->id,
+            'ps_order_id' => $orderId,
           ],
         ];
      
@@ -54,8 +69,17 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         curl_close($ch);
 
         $data = json_decode($response, true);
-        $redirectUrl = $data['url'];
 
-        Tools::redirect($redirectUrl);
+        $payment = new OrderPayment();
+        $payment->order_reference = $order->reference;
+        $payment->transaction_id = $data['id'];
+        $payment->payment_method = $this->module->displayName;
+        $payment->amount = (float)$cart->getOrderTotal(true, Cart::BOTH);
+        $payment->id_currency = (int)$currency->id;
+        $payment->conversion_rate = 1;
+
+        $payment->add();
+
+        Tools::redirect($data['url']);
     }
 }

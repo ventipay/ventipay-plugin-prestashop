@@ -34,6 +34,7 @@ class Venti extends PaymentModule
     public function install()
     {
         return (bool) parent::install()
+            && $this->installOrderState()
             && (bool) $this->registerHook(static::HOOKS)
             && $this->installConfiguration()
             && $this->installTabs();
@@ -42,6 +43,7 @@ class Venti extends PaymentModule
     public function uninstall()
     {
         return (bool) parent::uninstall()
+            && $this->uninstallOrderState()
             && $this->uninstallConfiguration()
             && $this->uninstallTabs();
     }
@@ -95,6 +97,37 @@ class Venti extends PaymentModule
         return (bool) Configuration::deleteByName(static::VENTI_TEST_MODE)
             && (bool) Configuration::deleteByName(static::VENTI_API_KEY_TEST)
             && (bool) Configuration::deleteByName(static::VENTI_API_KEY_LIVE);
+    }
+
+    private function installOrderState(): bool
+    {
+        $orderState = new OrderState();
+        $orderState->name = [
+            (int)Configuration::get('PS_LANG_DEFAULT') => 'Waiting for Venti Payment'
+        ];
+        $orderState->color = '#4169E1'; // opcional, color de la etiqueta
+        $orderState->unremovable = true; // que no se pueda borrar desde el back office
+        $orderState->logable = false; // no genera un mensaje en el historial
+        $orderState->send_email = false; // no envía mail automático
+        $orderState->module_name = $this->name; // opcional, identifica que pertenece a tu módulo
+        $orderState->add();
+
+        // Guardar el ID en la configuración para usarlo luego
+        return Configuration::updateValue('VENTI_OS_PENDING', (int)$orderState->id);
+    }
+
+    public function uninstallOrderState(): bool
+    {
+        $pendingId = (int) Configuration::get('VENTI_OS_PENDING');
+        if ($pendingId) {
+            $orderState = new OrderState($pendingId);
+            if (Validate::isLoadedObject($orderState)) {
+                $orderState->delete();
+            }
+            Configuration::deleteByName('VENTI_OS_PENDING');
+        }
+
+        return true;
     }
 
     public function hookPaymentOptions($params)

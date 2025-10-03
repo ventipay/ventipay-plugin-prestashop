@@ -11,9 +11,9 @@ class VentiValidationModuleFrontController extends ModuleFrontController
 
         if ($orderId) {
             $order = new Order($orderId);
-            $currentState = $order->current_state;
+            $currentState = (int)$order->current_state;
 
-            if ($currentState === Configuration::get('PS_OS_PAYMENT')) {
+            if ($currentState === (int)Configuration::get('PS_OS_PAYMENT')) {
                 $ready = true;
                 Tools::redirect(
                     'index.php?controller=order-confirmation'
