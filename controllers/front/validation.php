@@ -25,7 +25,10 @@ class VentiValidationModuleFrontController extends ModuleFrontController
             } 
         } 
         
-        $this->context->smarty->assign(['order_id' => $orderId]);
+        $this->context->smarty->assign([
+            'order_id' => $orderId,
+            'module_dir' => _MODULE_DIR_ . $this->module->name,
+        ]);
         $this->setTemplate('module:venti/views/templates/front/waiting.tpl');
     }
 }
