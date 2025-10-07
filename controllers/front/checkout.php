@@ -2,6 +2,21 @@
 
 class VentiCheckoutModuleFrontController extends ModuleFrontController
 {
+    const SUPPORTED_CURRENCIES = [
+        'CLF' => ['precision' => 4],
+        'CLP' => ['precision' => 0],
+        'EUR' => ['precision' => 2],
+        'USD' => ['precision' => 2]
+    ];
+    
+    public static function isSupported ($currency) {
+        if (!isset(self::SUPPORTED_CURRENCIES[$currency])) {
+            return false;
+        }
+
+        return true;
+    }
+
     public function postProcess()
     {
         $cart = $this->context->cart;
@@ -30,8 +45,17 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         $currency = new Currency($order->id_currency);
         $items = [];
 
+        if (!$this->isSupported($currency->iso_code)) {
+            header('Content-Type: application/json', true, 400);
+            echo json_encode(['message' => 'currency_not_supported']);
+            exit;
+        }
+
+        $getCurrency = self::SUPPORTED_CURRENCIES[$currency->iso_code];
+        $amount = $cart->getOrderTotal(true, Cart::BOTH) * pow(10, $getCurrency['precision']);        
+
         $items[] = [
-            'unit_price' => $cart->getOrderTotal(true, Cart::BOTH),
+            'unit_price' => $amount,
             'quantity' => 1,
         ];
 
@@ -41,6 +65,7 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
           'success_url' => $this->context->link->getModuleLink($this->module->name, 'validation', ['cart_id' => $cart->id], true),
           'notification_url' => $this->context->link->getModuleLink($this->module->name, 'webhook', ['ps_order_id' => (int)$orderId], true),
           'notification_events' => ['checkout.paid'],
+          //'source' => 'prestashop', //agregar el typo en la api
           'metadata' => [
             'ps_order_id' => $orderId,
           ],
