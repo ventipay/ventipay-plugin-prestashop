@@ -101,6 +101,11 @@ class Venti extends PaymentModule
 
     private function installOrderState(): bool
     {
+        $existingId = (int) Configuration::get('VENTI_OS_PENDING');
+        if ($existingId && Validate::isLoadedObject(new OrderState($existingId))) {
+            return true;
+        }
+
         $orderState = new OrderState();
         $orderState->name = [
             (int)Configuration::get('PS_LANG_DEFAULT') => 'Waiting for Venti Payment'
@@ -122,9 +127,10 @@ class Venti extends PaymentModule
         if ($pendingId) {
             $orderState = new OrderState($pendingId);
             if (Validate::isLoadedObject($orderState)) {
-                $orderState->delete();
+                $orderState->module_name = null;
+                $orderState->unremovable = false;
+                $orderState->update();
             }
-            Configuration::deleteByName('VENTI_OS_PENDING');
         }
 
         return true;
