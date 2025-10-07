@@ -52,7 +52,9 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         }
 
         $getCurrency = self::SUPPORTED_CURRENCIES[$currency->iso_code];
-        $amount = $cart->getOrderTotal(true, Cart::BOTH) * pow(10, $getCurrency['precision']);        
+
+        $total = round($cart->getOrderTotal(true, Cart::BOTH), $getCurrency['precision']);
+        $amount = $total * pow(10, $getCurrency['precision']);        
 
         $items[] = [
             'unit_price' => $amount,
