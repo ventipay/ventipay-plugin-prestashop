@@ -10,6 +10,7 @@ class Venti extends PaymentModule
     const ADMIN_VENTI_CONFIGURATION_CONTROLLER = 'AdminConfigureVentiPrestashop';
     const HOOKS = [
         'paymentOptions',
+        'header'
     ];
     const VENTI_TEST_MODE = 'VENTI_TEST_MODE';
     const VENTI_API_KEY_TEST = 'VENTI_API_KEY_TEST';
@@ -143,11 +144,25 @@ class Venti extends PaymentModule
         }
 
         $newOption = new PrestaShop\PrestaShop\Core\Payment\PaymentOption();
-        $newOption->setCallToActionText($this->l('Pagar con Venti'))
-            ->setLogo(_MODULE_DIR_ . $this->name . '/logo_venti.png')
-            ->setAction($this->context->link->getModuleLink($this->name, 'checkout', [], true));
+        $newOption->setCallToActionText($this->l('Paga con Venti'))
+                  ->setLogo(_MODULE_DIR_ . $this->name . '/logo_venti.png')
+                  ->setAction($this->context->link->getModuleLink($this->name, 'checkout', [], true));
 
         return [$newOption];
+    }
+
+    public function hookHeader($params)
+    {
+        if ($this->context->controller->php_self == 'order') {
+            $this->context->controller->registerStylesheet(
+                'venti-css',
+                'modules/' . $this->name . '/views/css/venti.css',
+                [
+                    'media' => 'all',
+                    'priority' => 150
+                ]
+            );
+        }
     }
 
     public function getContent()
