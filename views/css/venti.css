@@ -1,11 +1,10 @@
 .payment-option {
     display: flex !important;
-    align-items: center !important;  /* centra verticalmente radio + label */
-    justify-content: space-between;   /* separa texto/logo del radio */
-    gap: 10px;                        /* espacio entre radio y label */
+    align-items: center !important;
+    justify-content: space-between;
+    gap: 10px;
 }
 
-/* Forzar que el radio no flote */
 .payment-option .custom-radio {
     float: none !important;
     display: flex;
@@ -13,18 +12,16 @@
     margin-right: 10px;
 }
 
-/* Label: texto + logo en línea */
 .payment-option label {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
     width: 100%;
-    margin-bottom: 0; /* elimina espacio extra debajo del label */
+    margin-bottom: 0;
 }
 
-/* Logo alineado a la derecha */
 .payment-option label img {
-    margin-left: auto;  /* empuja el logo al extremo derecho */
+    margin-left: auto;
     max-height: 32px;
     width: auto;
 }
