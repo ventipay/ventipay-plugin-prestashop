@@ -10,7 +10,8 @@ class Venti extends PaymentModule
     const ADMIN_VENTI_CONFIGURATION_CONTROLLER = 'AdminConfigureVentiPrestashop';
     const HOOKS = [
         'paymentOptions',
-        'header'
+        'header',
+        'actionOrderSlipAdd',
     ];
     const VENTI_TEST_MODE = 'VENTI_TEST_MODE';
     const VENTI_API_KEY_TEST = 'VENTI_API_KEY_TEST';
@@ -27,9 +28,9 @@ class Venti extends PaymentModule
 
         parent::__construct();
 
-        $this->displayName = $this->l('Venti');
-        $this->description = $this->l('Plugin de Ventipay para PrestaShop');
-        $this->confirmUninstall = $this->l('Are you sure you want to uninstall?');
+        $this->displayName = 'Venti';
+        $this->description = 'Plugin de Ventipay para PrestaShop';
+        $this->confirmUninstall = '¿Estás seguro/a que deseas desinstalar este módulo de pago?';
     }
 
     public function install()
@@ -170,5 +171,87 @@ class Venti extends PaymentModule
         Tools::redirectAdmin(
             $this->context->link->getAdminLink(self::ADMIN_VENTI_CONFIGURATION_CONTROLLER)
         );
+    }
+
+    public function hookActionOrderSlipAdd($params)
+    {
+        $order = $params['order'];
+        $orderSlip = $params['orderSlipCreated'];
+
+        // Solo actúa si este módulo es el que procesó el pago
+        if ($order->module !== $this->name) {
+            return;
+        }
+
+        $amount = (float) $orderSlip->amount + (float) $orderSlip->total_shipping_tax_incl;
+    
+        if ($amount <= 0) {
+            return;
+        }
+
+        $payments = $order->getOrderPayments();
+
+        $checkoutId = null;
+        foreach ($payments as $payment) {
+            if ($payment->payment_method === $this->displayName) {
+                $checkoutId = $payment->transaction_id;
+                break;
+            }
+        }
+
+        $mode = Configuration::get('VENTI_TEST_MODE');
+        $apiKey = $mode ? Configuration::get('VENTI_API_KEY_TEST') : Configuration::get('VENTI_API_KEY_LIVE');
+
+        $ch = curl_init('https://api.ventipay.com/v1/checkouts/' . $checkoutId . '/refund');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ":");
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+          'Content-Type: application/json',
+        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+            'amount' => $amount,
+            'destination' => 'payment_method',
+        ]));
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) {
+            $ch = curl_init('https://api.ventipay.com/v1/checkouts/' . $checkoutId . '/refund');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ":");
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            ]);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+                'amount' => $amount,
+                'destination' => 'payment_method',
+            ]));
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+        }
+
+        if ($httpCode !== 200) {
+            // TODO: improve errors
+            $orderSlip->delete();
+            throw new PrestaShopException('El reembolso no fue realizado. Por favor, intente nuevamente o contacte soporte.');
+        }
+
+        $data = json_decode($response, true);
+
+        $order->current_state = Configuration::get('PS_OS_REFUND');
+        $order->save();
+
+        $history = new OrderHistory();
+        $history->id_order = $order->id;
+        $history->id_employee = (int)$this->context->employee->id ?? 0; // opcional, si quieres registrar quién hizo el cambio
+        $history->date_add = date('Y-m-d H:i:s'); 
+        $history->changeIdOrderState(Configuration::get('PS_OS_REFUND'), $order, true);
+        $history->addWithemail(false);
+
+        PrestaShopLogger::addLog("Reembolso de {$amount} ejecutado para pedido {$order->id}");
     }
 }
