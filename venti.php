@@ -10,7 +10,6 @@ class Venti extends PaymentModule
     const ADMIN_VENTI_CONFIGURATION_CONTROLLER = 'AdminConfigureVentiPrestashop';
     const HOOKS = [
         'paymentOptions',
-        'header',
         'actionOrderSlipAdd',
     ];
     const VENTI_TEST_MODE = 'VENTI_TEST_MODE';
@@ -150,20 +149,6 @@ class Venti extends PaymentModule
                   ->setAction($this->context->link->getModuleLink($this->name, 'checkout', [], true));
 
         return [$newOption];
-    }
-
-    public function hookHeader($params)
-    {
-        if ($this->context->controller->php_self == 'order') {
-            $this->context->controller->registerStylesheet(
-                'venti-css',
-                'modules/' . $this->name . '/views/css/venti.css',
-                [
-                    'media' => 'all',
-                    'priority' => 150
-                ]
-            );
-        }
     }
 
     public function getContent()
