@@ -2,4 +2,4 @@
 
 ## About
 
-This repository provides a plugin to connect PrestaShop with Ventipay
+This repository provides a plugin to connect PrestaShop with Venti
