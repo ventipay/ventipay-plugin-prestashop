@@ -20,7 +20,7 @@ class Venti extends PaymentModule
     {
         $this->name = 'venti';
         $this->tab = 'payments_gateways';
-        $this->version = '0.0.1';
+        $this->version = '1.0.0';
         $this->author = 'Venti';
         $this->need_instance = 0;
         $this->bootstrap = true;
