@@ -1,5 +1,5 @@
 <div style="text-align:center; padding:50px; font-family:Arial, sans-serif; color:#212023;">
-    <img src="{$module_dir}/logo_waiting.png" alt="Venti" style="width:100px; margin-bottom:30px;">
+    <img src="{$module_dir}/assets/images/logo_waiting.png" alt="Venti" style="width:100px; margin-bottom:30px;">
     <h2 style="color:#212023;">Estamos esperando la confirmación de tu pago...</h2>
     {if !empty($order_id)}
         <p>Tu pedido #{$order_id} se actualizará automáticamente.</p>

@@ -144,7 +144,7 @@ class Venti extends PaymentModule
 
         $newOption = new PrestaShop\PrestaShop\Core\Payment\PaymentOption();
         $newOption->setCallToActionText($this->l('Paga con Venti'))
-                  ->setLogo(_MODULE_DIR_ . $this->name . '/logo_checkout.png')
+                  ->setLogo(_MODULE_DIR_ . $this->name . '/assets/images/logo_checkout.png')
                   ->setAction($this->context->link->getModuleLink($this->name, 'checkout', [], true));
 
         return [$newOption];
