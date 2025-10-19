@@ -1,5 +1,4 @@
 <?php
-
 class VentiCheckoutModuleFrontController extends ModuleFrontController
 {
     const SUPPORTED_CURRENCIES = [
@@ -67,18 +66,17 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
           'success_url' => $this->context->link->getModuleLink($this->module->name, 'validation', ['cart_id' => $cart->id], true),
           'notification_url' => $this->context->link->getModuleLink($this->module->name, 'webhook', ['ps_order_id' => (int)$orderId], true),
           'notification_events' => ['checkout.paid'],
-          //'source' => 'prestashop', //agregar el typo en la api
           'metadata' => [
-            'ps_order_id' => $orderId,
-          ],
+            'ps_order_id' => $orderId
+          ]
         ];
      
         $ch = curl_init('https://api.ventipay.com/v1/checkouts');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ":");
+        curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ':');
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json',
+            'Content-Type: application/json'
         ]);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
 

@@ -43,13 +43,13 @@ class AdminConfigureVentiPrestashopController extends ModuleAdminController
                     ],
                     Venti::VENTI_API_KEY_TEST => [
                         'type' => 'text',
-                        'title' => $this->module->l('API Key Test'),
+                        'title' => $this->module->l('API Key Modo Test'),
                         'size' => 50,
                         'required' => true,
                     ],
                     Venti::VENTI_API_KEY_LIVE => [
                         'type' => 'text',
-                        'title' => $this->module->l('API Key Live'),
+                        'title' => $this->module->l('API Key Modo Live'),
                         'size' => 50,
                         'required' => true,
                     ],

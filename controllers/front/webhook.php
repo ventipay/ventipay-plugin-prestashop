@@ -44,9 +44,9 @@ class VentiWebhookModuleFrontController extends ModuleFrontController
 
         $ch = curl_init('https://api.ventipay.com/v1/checkouts/' . $checkoutId);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ":");
+        curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ':');
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-          'Content-Type: application/json',
+          'Content-Type: application/json'
         ]);
         $response = curl_exec($ch);
         curl_close($ch);

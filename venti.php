@@ -10,7 +10,7 @@ class Venti extends PaymentModule
     const ADMIN_VENTI_CONFIGURATION_CONTROLLER = 'AdminConfigureVentiPrestashop';
     const HOOKS = [
         'paymentOptions',
-        'actionOrderSlipAdd',
+        'actionOrderSlipAdd'
     ];
     const VENTI_TEST_MODE = 'VENTI_TEST_MODE';
     const VENTI_API_KEY_TEST = 'VENTI_API_KEY_TEST';
@@ -28,7 +28,7 @@ class Venti extends PaymentModule
         parent::__construct();
 
         $this->displayName = 'Venti';
-        $this->description = 'Plugin de Ventipay para PrestaShop';
+        $this->description = 'Plugin de Venti para PrestaShop';
         $this->confirmUninstall = '¿Estás seguro/a que deseas desinstalar este módulo de pago?';
     }
 
@@ -111,14 +111,13 @@ class Venti extends PaymentModule
         $orderState->name = [
             (int)Configuration::get('PS_LANG_DEFAULT') => 'Waiting for Venti Payment'
         ];
-        $orderState->color = '#4169E1'; // opcional, color de la etiqueta
-        $orderState->unremovable = true; // que no se pueda borrar desde el back office
-        $orderState->logable = false; // no genera un mensaje en el historial
-        $orderState->send_email = false; // no envía mail automático
-        $orderState->module_name = $this->name; // opcional, identifica que pertenece a tu módulo
+        $orderState->color = '#4169E1';
+        $orderState->unremovable = true;
+        $orderState->logable = false;
+        $orderState->send_email = false;
+        $orderState->module_name = $this->name;
         $orderState->add();
 
-        // Guardar el ID en la configuración para usarlo luego
         return Configuration::updateValue('VENTI_OS_PENDING', (int)$orderState->id);
     }
 
@@ -145,7 +144,7 @@ class Venti extends PaymentModule
 
         $newOption = new PrestaShop\PrestaShop\Core\Payment\PaymentOption();
         $newOption->setCallToActionText($this->l('Paga con Venti'))
-                  ->setLogo(_MODULE_DIR_ . $this->name . '/logo_venti.png')
+                  ->setLogo(_MODULE_DIR_ . $this->name . '/logo_checkout.png')
                   ->setAction($this->context->link->getModuleLink($this->name, 'checkout', [], true));
 
         return [$newOption];
@@ -163,7 +162,6 @@ class Venti extends PaymentModule
         $order = $params['order'];
         $orderSlip = $params['orderSlipCreated'];
 
-        // Solo actúa si este módulo es el que procesó el pago
         if ($order->module !== $this->name) {
             return;
         }
@@ -190,13 +188,12 @@ class Venti extends PaymentModule
         $ch = curl_init('https://api.ventipay.com/v1/checkouts/' . $checkoutId . '/refund');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ":");
+        curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ':');
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-          'Content-Type: application/json',
+          'Content-Type: application/json'
         ]);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-            'amount' => $amount,
-            'destination' => 'payment_method',
+            'amount' => $amount
         ]));
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -206,13 +203,12 @@ class Venti extends PaymentModule
             $ch = curl_init('https://api.ventipay.com/v1/checkouts/' . $checkoutId . '/refund');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ":");
+            curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ':');
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json',
+            'Content-Type: application/json'
             ]);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-                'amount' => $amount,
-                'destination' => 'payment_method',
+                'amount' => $amount
             ]));
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -220,9 +216,8 @@ class Venti extends PaymentModule
         }
 
         if ($httpCode !== 200) {
-            // TODO: improve errors
             $orderSlip->delete();
-            throw new PrestaShopException('El reembolso no fue realizado. Por favor, intente nuevamente o contacte soporte.');
+            throw new PrestaShopException('El reembolso no fue realizado. Por favor, intenta nuevamente.');
         }
 
         $data = json_decode($response, true);
@@ -232,7 +227,7 @@ class Venti extends PaymentModule
 
         $history = new OrderHistory();
         $history->id_order = $order->id;
-        $history->id_employee = (int)$this->context->employee->id ?? 0; // opcional, si quieres registrar quién hizo el cambio
+        $history->id_employee = (int)$this->context->employee->id ?? 0;
         $history->date_add = date('Y-m-d H:i:s'); 
         $history->changeIdOrderState(Configuration::get('PS_OS_REFUND'), $order, true);
         $history->addWithemail(false);
