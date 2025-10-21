@@ -30,4 +30,4 @@ Lo primero es conseguir tu API Key. Puedes obtenerla desde el [Dashboard](https:
 MIT
 
 ## Export
-`git archive --format=zip --output venti-prestashop.zip HEAD`
+`git archive --format=zip --output venti-prestashop.zip --prefix=venti/ HEAD`
