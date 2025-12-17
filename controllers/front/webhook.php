@@ -52,13 +52,22 @@ class VentiWebhookModuleFrontController extends ModuleFrontController
         curl_close($ch);
 
         $data = json_decode($response, true);
+        $status = strtolower(trim((string) ($data['status'] ?? '')));
 
-        if (empty($data['status']) || $data['status'] !== 'paid') {
-          http_response_code(400);
-          die('checkout_not_paid');
+        switch ($status) {
+          case 'paid':
+              $order->setCurrentState(Configuration::get('PS_OS_PAYMENT'));
+              break;
+
+          case 'expired':
+              $order->setCurrentState(Configuration::get('PS_OS_CANCELED'));
+              break;
+
+          default:
+              http_response_code(400);
+              die('checkout_status_invalid');
         }
-  
-        $order->setCurrentState(Configuration::get('PS_OS_PAYMENT'));
+        
         $order->save();
 
         http_response_code(200);

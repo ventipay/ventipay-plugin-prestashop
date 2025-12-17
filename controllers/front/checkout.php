@@ -59,13 +59,18 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
             'unit_price' => $amount,
             'quantity' => 1,
         ];
+       
+        $expiresAt = (new DateTime('now', new DateTimeZone('UTC')))
+            ->modify('+1 day')
+            ->format('Y-m-d H:i:s');
 
         $body = [
           'items' => $items,
           'currency' => $currency->iso_code,
           'success_url' => $this->context->link->getModuleLink($this->module->name, 'validation', ['cart_id' => $cart->id], true),
           'notification_url' => $this->context->link->getModuleLink($this->module->name, 'webhook', ['ps_order_id' => (int)$orderId], true),
-          'notification_events' => ['checkout.paid'],
+          'notification_events' => ['checkout.paid', 'checkout.expired'],
+          'expires_at' => $expiresAt,
           'metadata' => [
             'ps_order_id' => $orderId
           ]
