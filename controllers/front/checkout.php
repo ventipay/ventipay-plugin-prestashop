@@ -93,16 +93,12 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         curl_close($ch);
 
         $data = json_decode($response, true);
-
-        $payment = new OrderPayment();
-        $payment->order_reference = $order->reference;
-        $payment->transaction_id = $data['id'];
-        $payment->payment_method = $this->module->displayName;
-        $payment->amount = (float)$cart->getOrderTotal(true, Cart::BOTH);
-        $payment->id_currency = (int)$currency->id;
-        $payment->conversion_rate = 1;
-
-        $payment->add();
+        
+        $message = new Message();
+        $message->id_order = (int)$orderId;
+        $message->message = 'VENTI_CHECKOUT_ID=' . pSQL($data['id']);
+        $message->private = 1;
+        $message->add();
 
         Tools::redirect($data['url']);
     }

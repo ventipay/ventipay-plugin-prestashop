@@ -24,12 +24,12 @@ class VentiWebhookModuleFrontController extends ModuleFrontController
           die('order_already_processed');
         }
 
-        $payments = $order->getOrderPayments();
+        $messages = Message::getMessagesByOrderId($orderId, true);
 
         $checkoutId = null;
-        foreach ($payments as $payment) {
-            if ($payment->payment_method === $this->module->displayName) {
-                $checkoutId = $payment->transaction_id;
+        foreach ($messages as $msg) {
+            if (strpos($msg['message'], 'VENTI_CHECKOUT_ID=') === 0) {
+                $checkoutId = substr($msg['message'], strlen('VENTI_CHECKOUT_ID='));
                 break;
             }
         }
@@ -56,6 +56,26 @@ class VentiWebhookModuleFrontController extends ModuleFrontController
 
         switch ($status) {
           case 'paid':
+
+              $payments = $order->getOrderPayments();
+
+              foreach ($payments as $payment) {
+                 if ($payment->transaction_id === $data['id']) {
+                      http_response_code(200);
+                      die('already_processed');
+                  }
+              }
+
+              $payment = new OrderPayment();
+              $payment->order_reference = $order->reference;
+              $payment->transaction_id = $data['id'];
+              $payment->payment_method = $this->module->displayName;
+              $payment->amount = (float)$order->total_paid;
+              $payment->id_currency = (int)$order->id_currency;
+              $payment->conversion_rate = 1;
+
+              $payment->add();
+
               $order->setCurrentState(Configuration::get('PS_OS_PAYMENT'));
               break;
 
