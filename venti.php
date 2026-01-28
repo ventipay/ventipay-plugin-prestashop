@@ -113,7 +113,7 @@ class Venti extends PaymentModule
         ];
         $orderState->color = '#4169E1';
         $orderState->unremovable = true;
-        $orderState->logable = true;
+        $orderState->logable = false;
         $orderState->send_email = false;
         $orderState->module_name = $this->name;
         $orderState->add();
