@@ -38,7 +38,8 @@ class Venti extends PaymentModule
             && $this->installOrderState()
             && (bool) $this->registerHook(static::HOOKS)
             && $this->installConfiguration()
-            && $this->installTabs();
+            && $this->installTabs()
+            && $this->installCheckoutTable();
     }
 
     public function uninstall()
@@ -46,7 +47,8 @@ class Venti extends PaymentModule
         return (bool) parent::uninstall()
             && $this->uninstallOrderState()
             && $this->uninstallConfiguration()
-            && $this->uninstallTabs();
+            && $this->uninstallTabs()
+            && $this->uninstallCheckoutTable();
     }
 
     public function installTabs()
@@ -98,6 +100,25 @@ class Venti extends PaymentModule
         return (bool) Configuration::deleteByName(static::VENTI_TEST_MODE)
             && (bool) Configuration::deleteByName(static::VENTI_API_KEY_TEST)
             && (bool) Configuration::deleteByName(static::VENTI_API_KEY_LIVE);
+    }
+
+    private function installCheckoutTable(): bool
+    {
+        $sql = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'venti_checkout` (
+            `id_cart` INT UNSIGNED NOT NULL,
+            `checkout_id` VARCHAR(255) NOT NULL,
+            `date_add` DATETIME NOT NULL,
+            PRIMARY KEY (`id_cart`)
+        ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8mb4;';
+
+        return (bool) Db::getInstance()->execute($sql);
+    }
+
+    private function uninstallCheckoutTable(): bool
+    {
+        return (bool) Db::getInstance()->execute(
+            'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . 'venti_checkout`'
+        );
     }
 
     private function installOrderState(): bool

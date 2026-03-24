@@ -24,25 +24,7 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
             Tools::redirect('index.php?controller=order&step=1');
         }
 
-        $mode = Configuration::get('VENTI_TEST_MODE');
-        $apiKey = $mode ? Configuration::get('VENTI_API_KEY_TEST') : Configuration::get('VENTI_API_KEY_LIVE');
-
-        $this->module->validateOrder(
-            $cart->id,
-            Configuration::get('VENTI_OS_PENDING'),
-            (float)$cart->getOrderTotal(true, Cart::BOTH),
-            $this->module->displayName,
-            null,
-            [],
-            (int)$cart->id_currency,
-            false,
-            $this->context->customer->secure_key
-        );
-
-        $orderId = $this->module->currentOrder;
-        $order = new Order($orderId);
-        $currency = new Currency($order->id_currency);
-        $items = [];
+        $currency = new Currency($cart->id_currency);
 
         if (!$this->isSupported($currency->iso_code)) {
             header('Content-Type: application/json', true, 400);
@@ -50,10 +32,13 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
             exit;
         }
 
+        $mode = Configuration::get('VENTI_TEST_MODE');
+        $apiKey = $mode ? Configuration::get('VENTI_API_KEY_TEST') : Configuration::get('VENTI_API_KEY_LIVE');
+
         $getCurrency = self::SUPPORTED_CURRENCIES[$currency->iso_code];
 
         $total = round($cart->getOrderTotal(true, Cart::BOTH), $getCurrency['precision']);
-        $amount = $total * pow(10, $getCurrency['precision']);        
+        $amount = (int) ($total * pow(10, $getCurrency['precision']));
 
         $items[] = [
             'unit_price' => $amount,
@@ -68,15 +53,15 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
           'items' => $items,
           'currency' => $currency->iso_code,
           'success_url' => $this->context->link->getModuleLink($this->module->name, 'validation', ['cart_id' => $cart->id], true),
-          'notification_url' => $this->context->link->getModuleLink($this->module->name, 'webhook', ['ps_order_id' => (int)$orderId], true),
+          'notification_url' => $this->context->link->getModuleLink($this->module->name, 'webhook', ['cart_id' => (int)$cart->id], true),
           'notification_events' => ['checkout.paid', 'checkout.expired'],
           'expires_at' => $expiresAt,
           'metadata' => [
-            'ps_order_id' => $orderId
+            'cart_id' => (int) $cart->id
           ]
         ];
      
-        $ch = curl_init('https://api.ventipay.com/v1/checkouts');
+        $ch = curl_init('https://hnkk19gv-8081.use.devtunnels.ms/v1/checkouts');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ':');
@@ -93,12 +78,23 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         curl_close($ch);
 
         $data = json_decode($response, true);
-        
-        $message = new Message();
-        $message->id_order = (int)$orderId;
-        $message->message = 'VENTI_CHECKOUT_ID=' . pSQL($data['id']);
-        $message->private = 1;
-        $message->add();
+
+        $existing = Db::getInstance()->getRow(
+            'SELECT id_cart FROM `' . _DB_PREFIX_ . 'venti_checkout` WHERE id_cart = ' . (int) $cart->id
+        );
+
+        if ($existing) {
+            Db::getInstance()->update('venti_checkout', [
+                'checkout_id' => pSQL($data['id']),
+                'date_add' => date('Y-m-d H:i:s'),
+            ], 'id_cart = ' . (int) $cart->id);
+        } else {
+            Db::getInstance()->insert('venti_checkout', [
+                'id_cart' => (int) $cart->id,
+                'checkout_id' => pSQL($data['id']),
+                'date_add' => date('Y-m-d H:i:s'),
+            ]);
+        }
 
         Tools::redirect($data['url']);
     }
