@@ -51,7 +51,7 @@ class VentiWebhookModuleFrontController extends ModuleFrontController
         curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ':');
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
           'Content-Type: application/json',
-          'User-Agent: ventipay-plugin-prestashop/' . Venti::VERSION
+          'User-Agent: ventipay-plugin-prestashop/' . $this->module->version
         ]);
         $response = curl_exec($ch);
         curl_close($ch);

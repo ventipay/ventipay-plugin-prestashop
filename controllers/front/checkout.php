@@ -52,7 +52,6 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         $body = [
           'items' => $items,
           'currency' => $currency->iso_code,
-          'source' => 'prestashop',
           'success_url' => $this->context->link->getModuleLink($this->module->name, 'validation', ['cart_id' => $cart->id], true),
           'notification_url' => $this->context->link->getModuleLink($this->module->name, 'webhook', ['cart_id' => (int)$cart->id], true),
           'notification_events' => ['checkout.paid', 'checkout.expired'],
