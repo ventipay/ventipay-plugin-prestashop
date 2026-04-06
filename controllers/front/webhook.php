@@ -37,6 +37,12 @@ class VentiWebhookModuleFrontController extends ModuleFrontController
 
         $checkoutId = $row['checkout_id'];
 
+        // Check the checkout ID format to prevent unnecessary API calls
+        if (strpos($checkoutId, 'chk_') !== 0) {
+            http_response_code(400);
+            die('invalid_checkout_id');
+        }
+
         $mode = Configuration::get('VENTI_TEST_MODE');
         $apiKey = $mode ? Configuration::get('VENTI_API_KEY_TEST') : Configuration::get('VENTI_API_KEY_LIVE');
 
@@ -44,12 +50,21 @@ class VentiWebhookModuleFrontController extends ModuleFrontController
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ':');
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-          'Content-Type: application/json'
+          'Content-Type: application/json',
+          'User-Agent: ventipay-plugin-prestashop/' . Venti::VERSION
         ]);
         $response = curl_exec($ch);
         curl_close($ch);
 
         $data = json_decode($response, true);
+
+        // Check if the cart_id in the metadata matches the cart_id from the request
+        $metadataCartId = (int) $data['metadata']['cart_id'];
+        if ($metadataCartId !== $cartId) {
+            http_response_code(400);
+            die('cart_id_mismatch');
+        }
+
         $status = strtolower(trim((string) ($data['status'] ?? '')));
 
         switch ($status) {
@@ -73,7 +88,7 @@ class VentiWebhookModuleFrontController extends ModuleFrontController
               break;
 
           default:
-              http_response_code(400);
+              http_response_code(200);
               die('checkout_status_invalid');
         }
 

@@ -52,6 +52,7 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         $body = [
           'items' => $items,
           'currency' => $currency->iso_code,
+          'source' => 'prestashop',
           'success_url' => $this->context->link->getModuleLink($this->module->name, 'validation', ['cart_id' => $cart->id], true),
           'notification_url' => $this->context->link->getModuleLink($this->module->name, 'webhook', ['cart_id' => (int)$cart->id], true),
           'notification_events' => ['checkout.paid', 'checkout.expired'],
@@ -66,7 +67,8 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ':');
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json'
+            'Content-Type: application/json',
+            'User-Agent: ventipay-plugin-prestashop/' . Venti::VERSION
         ]);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
 
