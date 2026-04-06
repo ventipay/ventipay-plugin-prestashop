@@ -47,8 +47,7 @@ class Venti extends PaymentModule
         return (bool) parent::uninstall()
             && $this->uninstallOrderState()
             && $this->uninstallConfiguration()
-            && $this->uninstallTabs()
-            && $this->uninstallCheckoutTable();
+            && $this->uninstallTabs();
     }
 
     public function installTabs()
@@ -112,13 +111,6 @@ class Venti extends PaymentModule
         ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8mb4;';
 
         return (bool) Db::getInstance()->execute($sql);
-    }
-
-    private function uninstallCheckoutTable(): bool
-    {
-        return (bool) Db::getInstance()->execute(
-            'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . 'venti_checkout`'
-        );
     }
 
     private function installOrderState(): bool
