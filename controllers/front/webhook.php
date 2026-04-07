@@ -46,7 +46,7 @@ class VentiWebhookModuleFrontController extends ModuleFrontController
         $mode = Configuration::get('VENTI_TEST_MODE');
         $apiKey = $mode ? Configuration::get('VENTI_API_KEY_TEST') : Configuration::get('VENTI_API_KEY_LIVE');
 
-        $ch = curl_init('https://hnkk19gv-8081.use.devtunnels.ms/v1/checkouts/' . urlencode($checkoutId));
+        $ch = curl_init('https://api.ventipay.com/v1/checkouts/' . urlencode($checkoutId));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ':');
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
