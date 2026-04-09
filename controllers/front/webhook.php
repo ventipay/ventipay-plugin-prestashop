@@ -54,9 +54,29 @@ class VentiWebhookModuleFrontController extends ModuleFrontController
           'User-Agent: ventipay-plugin-prestashop/' . $this->module->version
         ]);
         $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        
+        if (curl_errno($ch)) {
+          PrestaShopLogger::addLog('cURL error: ' . curl_error($ch), 3);
+          curl_close($ch);
+          http_response_code(500);
+          die('curl_error');
+        }
         curl_close($ch);
 
+        if ($httpCode !== 200) {
+            PrestaShopLogger::addLog('API error: HTTP ' . $httpCode, 3);
+            http_response_code(502);
+            die('api_error');
+        }
+
         $data = json_decode($response, true);
+
+        if (!is_array($data) || !isset($data['metadata']['cart_id'], $data['status'])) {
+            PrestaShopLogger::addLog('invalid API response', 3);
+            http_response_code(502);
+            die('invalid_response');
+        }
 
         // Check if the cart_id in the metadata matches the cart_id from the request
         $metadataCartId = (int) $data['metadata']['cart_id'];

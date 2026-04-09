@@ -40,9 +40,11 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         $total = round($cart->getOrderTotal(true, Cart::BOTH), $getCurrency['precision']);
         $amount = (int) ($total * pow(10, $getCurrency['precision']));
 
-        $items[] = [
-            'unit_price' => $amount,
-            'quantity' => 1,
+        $items = [
+            [
+                'unit_price' => $amount,
+                'quantity' => 1,
+            ]
         ];
        
         $expiresAt = (new DateTime('now', new DateTimeZone('UTC')))
@@ -72,13 +74,26 @@ class VentiCheckoutModuleFrontController extends ModuleFrontController
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
 
         $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
         if (curl_errno($ch)) {
-          die('Error en cURL: ' . curl_error($ch));
+          PrestaShopLogger::addLog('cURL error: ' . curl_error($ch), 3);
+          curl_close($ch);
+          Tools::redirect('index.php?controller=order&step=1');
         }
         curl_close($ch);
 
+        if ($httpCode !== 200) {
+            PrestaShopLogger::addLog('API error: HTTP ' . $httpCode, 3);
+            Tools::redirect('index.php?controller=order&step=1');
+        }
+
         $data = json_decode($response, true);
+
+        if (!is_array($data) || !isset($data['id'], $data['url'])) {
+            PrestaShopLogger::addLog('invalid API response', 3);
+            Tools::redirect('index.php?controller=order&step=1');
+        }
 
         $existing = Db::getInstance()->getRow(
             'SELECT id_cart FROM `' . _DB_PREFIX_ . 'venti_checkout` WHERE id_cart = ' . (int) $cart->id
