@@ -5,90 +5,112 @@ class VentiWebhookModuleFrontController extends ModuleFrontController
     {
         parent::initContent();
 
-        $orderId = (int) Tools::getValue('ps_order_id');
+        $cartId = (int) Tools::getValue('cart_id');
 
-        if (!$orderId) {
+        if (!$cartId) {
           http_response_code(400);
-          die('order_id_required');
+          die('cart_id_required');
         }
 
-        $order = new Order($orderId);
+        $cart = new Cart($cartId);
 
-        if (!Validate::isLoadedObject($order)) {
+        if (!Validate::isLoadedObject($cart)) {
             http_response_code(404);
-            die('order_not_found');
+            die('cart_not_found');
         }
 
-        if ((int)$order->current_state !== (int)Configuration::get('VENTI_OS_PENDING')) {
-          http_response_code(400);
-          die('order_already_processed');
+        // Check if order already exists for this cart (idempotency)
+        $existingOrderId = (int) Order::getIdByCartId($cartId);
+        if ($existingOrderId) {
+            http_response_code(200);
+            die('already_processed');
         }
 
-        $messages = Message::getMessagesByOrderId($orderId, true);
+        $row = Db::getInstance()->getRow(
+            'SELECT checkout_id FROM `' . _DB_PREFIX_ . 'venti_checkout` WHERE id_cart = ' . (int) $cartId
+        );
 
-        $checkoutId = null;
-        foreach ($messages as $msg) {
-            if (strpos($msg['message'], 'VENTI_CHECKOUT_ID=') === 0) {
-                $checkoutId = substr($msg['message'], strlen('VENTI_CHECKOUT_ID='));
-                break;
-            }
-        }
-
-        if (!$checkoutId) {
+        if (!$row || empty($row['checkout_id'])) {
             http_response_code(404);
             die('checkout_id_not_found');
+        }
+
+        $checkoutId = $row['checkout_id'];
+
+        // Check the checkout ID format to prevent unnecessary API calls
+        if (strpos($checkoutId, 'chk_') !== 0) {
+            http_response_code(400);
+            die('invalid_checkout_id');
         }
 
         $mode = Configuration::get('VENTI_TEST_MODE');
         $apiKey = $mode ? Configuration::get('VENTI_API_KEY_TEST') : Configuration::get('VENTI_API_KEY_LIVE');
 
-        $ch = curl_init('https://api.ventipay.com/v1/checkouts/' . $checkoutId);
+        $ch = curl_init('https://api.ventipay.com/v1/checkouts/' . urlencode($checkoutId));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_USERPWD, $apiKey . ':');
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-          'Content-Type: application/json'
+          'Content-Type: application/json',
+          'User-Agent: ventipay-plugin-prestashop/' . $this->module->version
         ]);
         $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        
+        if (curl_errno($ch)) {
+          PrestaShopLogger::addLog('cURL error: ' . curl_error($ch), 3);
+          curl_close($ch);
+          http_response_code(500);
+          die('curl_error');
+        }
         curl_close($ch);
 
+        if ($httpCode !== 200) {
+            PrestaShopLogger::addLog('API error: HTTP ' . $httpCode, 3);
+            http_response_code(502);
+            die('api_error');
+        }
+
         $data = json_decode($response, true);
+
+        if (!is_array($data) || !isset($data['metadata']['cart_id'], $data['status'])) {
+            PrestaShopLogger::addLog('invalid API response', 3);
+            http_response_code(502);
+            die('invalid_response');
+        }
+
+        // Check if the cart_id in the metadata matches the cart_id from the request
+        $metadataCartId = (int) $data['metadata']['cart_id'];
+        if ($metadataCartId !== $cartId) {
+            http_response_code(400);
+            die('cart_id_mismatch');
+        }
+
         $status = strtolower(trim((string) ($data['status'] ?? '')));
 
         switch ($status) {
           case 'paid':
+              $customer = new Customer($cart->id_customer);
 
-              $payments = $order->getOrderPayments();
-
-              foreach ($payments as $payment) {
-                 if ($payment->transaction_id === $data['id']) {
-                      http_response_code(200);
-                      die('already_processed');
-                  }
-              }
-
-              $payment = new OrderPayment();
-              $payment->order_reference = $order->reference;
-              $payment->transaction_id = $data['id'];
-              $payment->payment_method = $this->module->displayName;
-              $payment->amount = (float)$order->total_paid;
-              $payment->id_currency = (int)$order->id_currency;
-              $payment->conversion_rate = 1;
-
-              $payment->add();
-
-              $order->setCurrentState(Configuration::get('PS_OS_PAYMENT'));
+              $this->module->validateOrder(
+                  (int) $cart->id,
+                  (int) Configuration::get('PS_OS_PAYMENT'),
+                  (float) $cart->getOrderTotal(true, Cart::BOTH),
+                  $this->module->displayName,
+                  null,
+                  ['transaction_id' => $checkoutId],
+                  (int) $cart->id_currency,
+                  false,
+                  $customer->secure_key
+              );
               break;
 
           case 'expired':
-              $order->setCurrentState(Configuration::get('PS_OS_CANCELED'));
               break;
 
           default:
-              http_response_code(400);
+              http_response_code(200);
               die('checkout_status_invalid');
         }
-        
-        $order->save();
 
         http_response_code(200);
         die('OK');
